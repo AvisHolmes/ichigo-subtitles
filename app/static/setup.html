@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ichigo · 一語一語</title>
+<style>
+:root {
+  --bg: #15161a; --panel: #1d1f25; --line: #2a2d35; --text: #e9e6df; --dim: #8b8f9a;
+  --ruby: #f2b880; --gloss: #9fd3c7; --accent: #f28f6b; --warn: #e8c46a; --bad: #ef7b7b; --field: #262932;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+  font-family: "Segoe UI", "Noto Sans JP", "Yu Gothic UI", system-ui, sans-serif; font-size: 15px; }
+main { max-width: 860px; margin: 0 auto; padding: 28px 24px 110px; }
+h1 { font-size: 30px; font-weight: 500; margin: 0 0 4px; }
+h1 small { color: var(--ruby); font-size: 0.6em; margin-left: 8px; }
+h2 { font-size: 19px; font-weight: 600; margin: 26px 0 8px; }
+p { line-height: 1.5; margin: 6px 0; }
+.dim { color: var(--dim); }
+.step { display: none; }
+.step.on { display: block; }
+button { font: inherit; color: var(--text); background: var(--field); border: 1px solid #363a45; border-radius: 8px;
+  padding: 8px 14px; cursor: pointer; }
+button:hover { border-color: #4a4f5c; }
+button.primary { background: var(--accent); color: #1a1a1a; border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .5; cursor: default; }
+input[type=text], select { font: inherit; color: var(--text); background: var(--field); border: 1px solid #363a45;
+  border-radius: 8px; padding: 7px 10px; }
+input[type=text] { flex: 1; min-width: 0; }
+.uilang { display: flex; gap: 14px; margin-top: 26px; flex-wrap: wrap; }
+.uilang button { flex: 1; min-width: 200px; padding: 22px; font-size: 20px; text-align: left; }
+.uilang button small { display: block; color: var(--dim); font-size: 13px; margin-top: 4px; }
+.uilang button.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.note { background: #2a2618; border: 1px solid #4a4128; border-radius: 8px; padding: 10px 14px; margin: 12px 0; color: #e9dfc2; }
+.langs { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.lang { display: flex; gap: 10px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.lang.on { border-color: var(--accent); }
+.lang.fixed { cursor: default; }
+.lang input { margin-top: 4px; accent-color: var(--accent); }
+.lang .nm { font-size: 16px; }
+.lang .meta { color: var(--dim); font-size: 12.5px; margin-top: 3px; line-height: 1.4; }
+.bar { height: 4px; background: var(--field); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--gloss); }
+details { margin-top: 10px; }
+summary { cursor: pointer; color: var(--dim); padding: 4px 0; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+.row { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.row label { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.ok { color: var(--gloss); } .bad { color: var(--bad); }
+.yom { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.yom:first-child { border-top: 0; }
+.yom .t { flex: 1; min-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+footer { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--line);
+  padding: 12px 24px; display: flex; gap: 12px; align-items: center; justify-content: flex-end; }
+footer .sum { margin-right: auto; color: var(--dim); }
+.progress { height: 10px; background: var(--field); border-radius: 5px; overflow: hidden; margin: 18px 0 8px; }
+.progress i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.progress.busy i { width: 30% !important; animation: slide 1.2s linear infinite; }
+@keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+.err { color: var(--bad); white-space: pre-wrap; }
+ul.cov { padding-left: 20px; } ul.cov li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<main>
+  <section class="step" id="s1">
+    <h1>Ichigo<small>一語一語</small></h1>
+    <p class="dim">Live word-by-word subtitles for Japanese calls · Живой подстрочник японской речи</p>
+    <div class="uilang">
+      <button data-ui="en">English<small>Interface language</small></button>
+      <button data-ui="ru">Русский<small>Язык интерфейса</small></button>
+    </div>
+  </section>
+
+  <section class="step" id="s2">
+    <h1 data-t="dictTitle"></h1>
+    <p data-t="dictIntro"></p>
+    <div class="note" data-t="warn"></div>
+    <div class="langs" id="main-langs"></div>
+    <p class="dim" id="nodict" style="margin-top:10px"></p>
+    <details id="more"><summary data-t="more"></summary><div class="langs" id="more-langs" style="margin-top:8px"></div></details>
+
+    <div id="ru-extra" style="display:none">
+      <h2 data-t="ruTitle"></h2>
+      <div class="box">
+        <div class="row"><label><input type="checkbox" id="warodai"><span><b>WARODAI</b> — <span data-t="warodai"></span></span></label></div>
+        <p style="margin-top:12px"><b data-t="yarxiTitle"></b> <span class="dim" data-t="yarxi"></span></p>
+        <div class="row"><input type="text" id="yarxi" placeholder="D:\Yarxi\yarxi.db"><button class="pick" data-kind="yarxi" data-t="browse"></button></div>
+        <div class="dim" id="yarxi-st" style="margin-top:4px"></div>
+      </div>
+    </div>
+
+    <h2 data-t="yomTitle"></h2>
+    <p class="dim" data-t="yom"></p>
+    <div class="box">
+      <div id="yom-list"></div>
+      <div class="row"><input type="text" id="yom-path" placeholder="D:\dictionaries\ja-xx.zip"><button class="pick" data-kind="yomitan" data-t="browse"></button><button id="yom-add" data-t="add"></button></div>
+      <div class="dim" id="yom-st" style="margin-top:4px"></div>
+    </div>
+
+    <div class="row" id="force-row" style="display:none;margin-top:18px"><label><input type="checkbox" id="force"><span data-t="force"></span></label></div>
+  </section>
+
+  <section class="step" id="s3">
+    <h1 data-t="installTitle"></h1>
+    <p id="stage"></p>
+    <div class="progress" id="bar"><i></i></div>
+    <p class="dim" id="model"></p>
+    <div id="result"></div>
+  </section>
+</main>
+<footer>
+  <span class="sum" id="sum"></span>
+  <button id="back" data-t="back"></button>
+  <button id="cancel" data-t="cancel"></button>
+  <button id="next" class="primary"></button>
+</footer>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let info, ui = "en", step = 1, sel = new Set(["en"]), yomitan = [], polling = null;
+
+const I18N = {
+  en: {
+    dictTitle: "Dictionaries", back: "Back", cancel: "Cancel", next: "Next", install: "Install", apply: "Apply", start: "Start Ichigo",
+    dictIntro: "Choose the languages for the glosses under the words. <b>English (JMdict) is always installed</b>: it is the base of the dictionary.",
+    warn: "Dictionaries in other languages are <b>much less complete than English</b>. The percentage shows how many frequent words have a translation; where one is missing, the English gloss is shown in italics.",
+    more: "More languages", base: "base, always installed",
+    noDict: "No open Japanese dictionary yet for {list} — you can connect your own Yomitan dictionary below.",
+    ruTitle: "Russian: extra dictionaries",
+    warodai: "a large Japanese–Russian dictionary with examples. License CC BY-NC-ND 3.0: non-commercial use only.",
+    yarxiTitle: "Yarxi", yarxi: "— path to your copy of yarxi.db (Russian kanji names). It is only read on your computer, never copied or shared. Leave empty to skip.",
+    browse: "Browse…", add: "Add",
+    yomTitle: "Your own dictionaries (Yomitan)",
+    yom: "Connect a Yomitan dictionary (.zip) you have — for example, for a language without an open dictionary (Italian, Vietnamese, Arabic, Hebrew, Indonesian, Ukrainian…). It stays on your computer; use only dictionaries you have the right to use.",
+    yomLang: "translations in", remove: "Remove",
+    force: "Download fresh copies of the dictionaries (update)",
+    total: "Download: about {mb} MB", totalNone: "Nothing new to download",
+    yarxiOk: "✓ Yarxi found", yarxiBad: "✗ not a Yarxi database", yomBad: "✗ not a Yomitan dictionary (.zip with term_bank_*.json)",
+    installTitle: "Installing dictionaries",
+    st_start: "Starting…", st_download: "Downloading {d}", st_unpack: "Unpacking {d}", st_build: "Reading {d}", st_write: "Writing the dictionary",
+    st_done: "Done!", st_error: "Something went wrong:",
+    model_loading: "Speech model (Whisper): loading — the first time it downloads about 3 GB, this can take a while.",
+    model_gpu: "Speech model: {m} · GPU — ready.", model_cpu: "Speech model: {m} · CPU — ready (GPU not available, accuracy is lower).",
+    covTitle: "Installed languages:",
+  },
+  ru: {
+    dictTitle: "Словари", back: "Назад", cancel: "Отмена", next: "Далее", install: "Установить", apply: "Применить", start: "Запустить Ichigo",
+    dictIntro: "Выберите языки переводов под словами. <b>Английский (JMdict) ставится всегда</b>: это основа словаря.",
+    warn: "Словари на других языках <b>намного менее полные, чем английский</b>. Процент — доля частотных слов, у которых есть перевод; если перевода нет, показывается английский курсивом.",
+    more: "Ещё языки", base: "основа, ставится всегда",
+    noDict: "Для языков {list} открытого японского словаря пока нет — можно подключить свой словарь Yomitan ниже.",
+    ruTitle: "Русский: дополнительные словари",
+    warodai: "большой японско-русский словарь с примерами. Лицензия CC BY-NC-ND 3.0: только некоммерческое использование.",
+    yarxiTitle: "Яркси", yarxi: "— путь к вашей копии yarxi.db (русские «прозвища» кандзи). Файл только читается на вашем компьютере, никуда не копируется. Можно оставить пустым.",
+    browse: "Обзор…", add: "Добавить",
+    yomTitle: "Свои словари (Yomitan)",
+    yom: "Подключите свой словарь Yomitan (.zip) — например, для языка, для которого нет открытого словаря (итальянский, вьетнамский, арабский, иврит, индонезийский, украинский…). Он остаётся на вашем компьютере; используйте только словари, на которые у вас есть права.",
+    yomLang: "переводы на", remove: "Убрать",
+    force: "Скачать словари заново (обновить)",
+    total: "Скачать: примерно {mb} МБ", totalNone: "Ничего нового скачивать не нужно",
+    yarxiOk: "✓ Яркси найден", yarxiBad: "✗ это не база Яркси", yomBad: "✗ это не словарь Yomitan (.zip с term_bank_*.json)",
+    installTitle: "Установка словарей",
+    st_start: "Начинаем…", st_download: "Скачиваю {d}", st_unpack: "Распаковываю {d}", st_build: "Читаю {d}", st_write: "Записываю словарь",
+    st_done: "Готово!", st_error: "Что-то пошло не так:",
+    model_loading: "Модель распознавания речи (Whisper): загружается — в первый раз она скачивает около 3 ГБ, это может занять время.",
+    model_gpu: "Модель распознавания: {m} · GPU — готова.", model_cpu: "Модель распознавания: {m} · CPU — готова (GPU недоступен, точность ниже).",
+    covTitle: "Установленные языки:",
+  },
+};
+const T = (k, v) => { let s = I18N[ui][k] ?? I18N.en[k] ?? k; for (const [n, x] of Object.entries(v || {})) s = s.replace(`{${n}}`, x); return s; };
+const api = (url, body) => fetch(url, body === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)}).then(r => r.json());
+
+function applyLang() {
+  document.documentElement.lang = ui;
+  document.querySelectorAll("[data-t]").forEach(el => el.innerHTML = T(el.dataset.t));
+  renderLangs(); renderYom(); renderFooter();
+}
+
+function show(n) {
+  step = n;
+  document.querySelectorAll(".step").forEach((el, i) => el.classList.toggle("on", i + 1 === n));
+  renderFooter();
+}
+
+function renderFooter() {
+  const first = info && info.first_run;
+  document.querySelector("footer").style.display = step === 1 ? "none" : "";
+  $("#back").style.display = step === 2 ? "" : "none";
+  $("#cancel").style.display = step === 2 && !first ? "" : "none";
+  $("#next").style.display = step === 2 || (step === 3 && info?.job?.state === "done") ? "" : "none";
+  $("#next").textContent = step === 3 ? T("start") : first ? T("install") : T("apply");
+  $("#next").disabled = step === 3 ? false : !!(yarxiBad());
+  $("#sum").textContent = step === 2 ? downloadSize() : "";
+}
+
+function downloadSize() {
+  if (!info) return "";
+  const installed = new Set(info.installed), seen = new Set();
+  let mb = 0;
+  for (const l of sel) {
+    const v = info.langs[l];
+    if (!v || (installed.has(l) && !$("#force").checked)) continue;
+    const key = v.sources.join();  // 简 и 繁 — один и тот же источник
+    if (!seen.has(key)) { seen.add(key); mb += v.size || 0; }
+  }
+  if (sel.has("ru") && $("#warodai").checked && (!info.settings.warodai || $("#force").checked)) mb += 32;
+  return mb ? T("total", {mb}) : T("totalNone");
+}
+
+function langCard(code, v) {
+  const fixed = code === "en", on = sel.has(code);
+  const srcs = v.sources.map(s => s.startsWith("jmdict") ? "JMdict" : "Wiktionary");
+  const meta = (fixed ? T("base") + " · " : "") + [...new Set(srcs)].join(" + ") + ` · ${v.coverage}% · ${v.size} MB`;
+  return `<label class="lang ${on ? "on" : ""} ${fixed ? "fixed" : ""}" data-code="${code}">
+    <input type="checkbox" ${on ? "checked" : ""} ${fixed ? "disabled" : ""}>
+    <div style="flex:1"><div class="nm">${esc(v.name)}</div><div class="meta">${esc(meta)}</div>
+    <div class="bar"><i style="width:${v.coverage}%"></i></div></div></label>`;
+}
+
+function renderLangs() {
+  if (!info) return;
+  const main = [], more = [], none = [];
+  for (const [code, v] of Object.entries(info.langs)) {
+    if (!v.available) none.push(v.name);
+    else (v.more ? more : main).push(langCard(code, v));
+  }
+  $("#nodict").textContent = T("noDict", {list: none.join(", ")});
+  $("#main-langs").innerHTML = main.join("");
+  $("#more-langs").innerHTML = more.join("");
+  if ([...sel].some(l => info.langs[l]?.more)) $("#more").open = true;
+  document.querySelectorAll(".lang input:not([disabled])").forEach(cb => cb.onchange = () => {
+    const code = cb.closest(".lang").dataset.code;
+    cb.checked ? sel.add(code) : sel.delete(code);
+    cb.closest(".lang").classList.toggle("on", cb.checked);
+    $("#ru-extra").style.display = sel.has("ru") ? "" : "none";
+    renderFooter();
+  });
+  $("#ru-extra").style.display = sel.has("ru") ? "" : "none";
+}
+
+function renderYom() {
+  if (!info) return;
+  const opts = Object.entries(info.langs).filter(([c]) => c !== "en" || true)
+    .map(([c, v]) => `<option value="${c}">${esc(v.name)}</option>`).join("");
+  $("#yom-list").innerHTML = yomitan.map((y, i) => `<div class="yom"><span class="t" title="${esc(y.path)}">📖 ${esc(y.title || y.path)}</span>
+    <span class="dim">${T("yomLang")}</span><select data-i="${i}">${opts}</select><button data-rm="${i}">${T("remove")}</button></div>`).join("");
+  $("#yom-list").querySelectorAll("select").forEach(s => { s.value = yomitan[+s.dataset.i].lang; s.onchange = () => yomitan[+s.dataset.i].lang = s.value; });
+  $("#yom-list").querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { yomitan.splice(+b.dataset.rm, 1); renderYom(); });
+}
+
+// --- Яркси: проверяем путь, пока его вводят
+let yarxiState = "";
+const yarxiBad = () => sel.has("ru") && $("#yarxi").value.trim() && yarxiState !== "ok";
+async function checkYarxi() {
+  const path = $("#yarxi").value.trim();
+  if (!path) { yarxiState = ""; $("#yarxi-st").textContent = ""; renderFooter(); return; }
+  const r = await api("/api/check", {kind: "yarxi", path});
+  yarxiState = r.ok ? "ok" : "bad";
+  $("#yarxi-st").innerHTML = r.ok ? `<span class="ok">${T("yarxiOk")}</span> <span class="dim">${esc(r.path)}</span>` : `<span class="bad">${T("yarxiBad")}</span>`;
+  renderFooter();
+}
+let yt; $("#yarxi").oninput = () => { clearTimeout(yt); yt = setTimeout(checkYarxi, 400); };
+
+async function addYom() {
+  const path = $("#yom-path").value.trim();
+  if (!path) return;
+  const r = await api("/api/check", {kind: "yomitan", path});
+  if (!r.ok) { $("#yom-st").innerHTML = `<span class="bad">${T("yomBad")}</span>`; return; }
+  $("#yom-st").textContent = "";
+  yomitan.push({path, title: r.title, lang: ui === "ru" ? "ru" : "en"});
+  $("#yom-path").value = "";
+  renderYom();
+}
+$("#yom-add").onclick = addYom;
+
+// «Обзор…» — системный диалог через pywebview; в обычном браузере его нет, тогда путь вводят руками
+document.querySelectorAll(".pick").forEach(b => {
+  if (!window.pywebview) b.style.display = "none";
+  b.onclick = async () => {
+    const path = await window.pywebview.api.pick_file(b.dataset.kind);
+    if (!path) return;
+    if (b.dataset.kind === "yarxi") { $("#yarxi").value = path; checkYarxi(); }
+    else { $("#yom-path").value = path; addYom(); }
+  };
+});
+window.addEventListener("pywebviewready", () => document.querySelectorAll(".pick").forEach(b => b.style.display = ""));
+$("#force").onchange = renderFooter;
+$("#warodai").onchange = renderFooter;
+
+// --- шаг 1: язык интерфейса
+document.querySelectorAll("[data-ui]").forEach(b => b.onclick = async () => {
+  ui = b.dataset.ui;
+  document.querySelectorAll("[data-ui]").forEach(x => x.classList.toggle("sel", x === b));
+  await api("/api/prefs", {ui});
+  if (info.first_run && !info.settings.langs.includes("ru") && ui === "ru") sel.add("ru");
+  applyLang();
+  show(2);
+});
+
+$("#back").onclick = () => show(1);
+$("#cancel").onclick = () => location.href = "/";
+$("#next").onclick = async () => {
+  if (step === 3) { location.href = "/"; return; }
+  const body = {ui, langs: [...sel], warodai: $("#warodai").checked, yarxi: $("#yarxi").value.trim(),
+                yomitan: yomitan.map(({path, lang}) => ({path, lang})), force: $("#force").checked};
+  const r = await api("/api/setup", body);
+  if (r.error) { alert(r.error === "yarxi" ? T("yarxiBad") : r.error === "yomitan" ? T("yomBad") : r.error); return; }
+  show(3);
+  poll();
+};
+
+function poll() {
+  clearInterval(polling);
+  const tick = async () => {
+    info = await api("/api/setup");
+    const j = info.job;
+    $("#stage").innerHTML = j.state === "error" ? `<span class="err">${T("st_error")}\n${esc(j.error)}</span>`
+      : esc(T("st_" + (j.state === "done" ? "done" : j.stage), {d: j.detail}));
+    $("#bar").classList.toggle("busy", j.state === "running" && j.frac == null);
+    $("#bar i").style.width = (j.state === "done" ? 100 : (j.frac || 0) * 100) + "%";
+    $("#model").textContent = T("model_" + info.model_state, {m: info.model});
+    if (j.state === "done" && j.result) {
+      $("#result").innerHTML = `<p>${T("covTitle")}</p><ul class="cov">` + j.result.langs.map(l =>
+        `<li>${esc(info.langs[l]?.name || l)} — ${j.result.coverage[l] || "<1"}%</li>`).join("") + "</ul>";
+    }
+    if (j.state === "error") { $("#back").style.display = ""; $("#back").onclick = () => { $("#back").onclick = () => show(1); show(2); }; }
+    renderFooter();
+    if (j.state !== "running" && info.model_state !== "loading") clearInterval(polling);
+  };
+  tick();
+  polling = setInterval(tick, 700);
+}
+
+(async () => {
+  info = await api("/api/setup");
+  const s = info.settings;
+  ui = s.ui || "en";
+  sel = new Set(["en", ...s.langs]);
+  yomitan = (s.yomitan || []).map(y => ({...y, title: y.path.split(/[\\/]/).pop()}));
+  yomitan.forEach(y => api("/api/check", {kind: "yomitan", path: y.path}).then(r => { if (r.ok) { y.title = r.title; renderYom(); } }));
+  $("#warodai").checked = info.first_run ? true : !!s.warodai;
+  $("#yarxi").value = s.yarxi || info.yarxi_default || "";
+  $("#force-row").style.display = info.first_run ? "none" : "";
+  document.querySelector(`[data-ui="${ui}"]`).classList.add("sel");
+  applyLang();
+  if ($("#yarxi").value) checkYarxi();
+  if (info.job.state === "running") { show(3); poll(); }
+  else show(info.first_run ? 1 : 2);
+})();
+</script>
+</body>
+</html>

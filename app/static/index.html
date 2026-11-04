@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ichigo · 一語一語</title>
+<style>
+:root {
+  --bg: #15161a; --panel: #1d1f25; --line: #2a2d35; --text: #e9e6df; --dim: #8b8f9a;
+  --ruby: #f2b880; --gloss: #9fd3c7; --gram: #c7a6f0; --accent: #f28f6b; --partial: #6c707b;
+  --fs: 30px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font-family: "Noto Sans JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif; }
+body { display: flex; flex-direction: column; }
+header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 8px 14px;
+  background: var(--panel); border-bottom: 1px solid var(--line); font-size: 13px; }
+header select, header input, header button { background: #262932; color: var(--text); border: 1px solid #363a45;
+  border-radius: 6px; padding: 5px 8px; font: inherit; }
+header button { cursor: pointer; }
+header button.on { background: var(--accent); color: #1a1a1a; border-color: var(--accent); }
+header label { display: flex; align-items: center; gap: 6px; color: var(--dim); }
+#meter { width: 90px; height: 8px; background: #262932; border-radius: 4px; position: relative; overflow: hidden; }
+#meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--gloss); width: 0; transition: width .12s; }
+#meter b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--accent); }
+#meter.speech i { background: var(--accent); }
+#status { color: var(--dim); margin-left: auto; }
+main { flex: 1; display: flex; min-height: 0; }
+#lines { flex: 1; overflow-y: auto; padding: 14px 18px 40px; }
+#detail { width: 380px; border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto;
+  padding: 14px 16px; font-size: 14px; }
+#detail.hidden { display: none; }
+.line { padding: 10px 0 14px; border-bottom: 1px solid var(--line); }
+.meta { font-size: 11px; color: var(--dim); margin-bottom: 4px; display: flex; gap: 10px; }
+.meta .raw { cursor: pointer; }
+.chunks { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px 14px; }
+.chunk { display: inline-flex; flex-direction: column; align-items: flex-start; cursor: pointer;
+  border-radius: 6px; padding: 2px 4px; max-width: 13em; }
+.chunk:hover, .chunk.sel { background: #262932; }
+.chunk .jp { font-size: var(--fs); line-height: 1.9; white-space: nowrap; }
+.chunk.func .jp { color: #c9c3b8; }
+.chunk.punct { cursor: default; }
+.chunk.punct:hover { background: none; }
+ruby rt { color: var(--ruby); font-size: 0.45em; }
+body.nofuri ruby rt { visibility: hidden; }
+body.notr .gl, body.notr .gm, body.notr .lit { display: none; }
+.gl { font-size: calc(var(--fs) * 0.43); color: var(--gloss); line-height: 1.25; max-width: 15em; }
+.gl.fb { color: #a8b8d8; font-style: italic; }  /* перевода на выбранном языке нет — запасной */
+.gm { font-size: calc(var(--fs) * 0.38); color: var(--gram); line-height: 1.25; }
+.lit { margin-top: 8px; font-size: calc(var(--fs) * 0.5); color: var(--dim); }
+.lit b { color: var(--text); font-weight: normal; }
+.partial { color: var(--partial); font-size: var(--fs); padding: 10px 0; }
+.partial::before { content: "● "; color: var(--accent); font-size: 0.5em; vertical-align: middle; }
+#input { display: flex; gap: 8px; padding: 8px 14px; border-top: 1px solid var(--line); background: var(--panel); }
+#input input { flex: 1; font-size: 18px; padding: 8px 10px; background: #262932; color: var(--text);
+  border: 1px solid #363a45; border-radius: 6px; }
+#input button { padding: 0 16px; background: var(--accent); border: 0; border-radius: 6px; font-weight: 600; cursor: pointer; }
+#detail h2 { font-size: 28px; margin: 4px 0 2px; font-weight: 500; }
+#detail .rd { color: var(--ruby); font-size: 16px; }
+#detail .ent { margin: 14px 0; padding-top: 10px; border-top: 1px solid var(--line); }
+#detail .src { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
+#detail .hw { font-size: 17px; margin: 2px 0 6px; }
+#detail ol { margin: 0; padding-left: 20px; }
+#detail li { margin: 3px 0; line-height: 1.4; }
+#detail .ex { color: var(--dim); font-size: 13px; margin-top: 6px; line-height: 1.5; }
+#detail .kj { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+#detail .kj span { background: #262932; border-radius: 6px; padding: 4px 8px; }
+#detail .kj big { font-size: 22px; margin-right: 6px; }
+#detail .gram { color: var(--gram); margin: 4px 0; }
+.empty { color: var(--dim); text-align: center; margin-top: 18vh; line-height: 1.8; }
+@media (max-width: 900px) { #detail { position: fixed; right: 0; top: 50px; bottom: 60px; width: min(380px, 92vw); } }
+</style>
+</head>
+<body>
+<header>
+  <label><span data-t="source">Источник</span> <select id="dev"></select></label>
+  <button id="refresh" data-t-title="refreshTitle">🔄</button>
+  <button id="pause">⏸ Пауза</button>
+  <label><span data-t="sens">Чувствит.</span> <input id="thr" type="range" min="0.001" max="0.05" step="0.001" value="0.006" style="width:90px"></label>
+  <div id="meter"><i></i><b></b></div>
+  <label><span data-t="phrasePause">Пауза фразы</span> <input id="pz" type="range" min="0.3" max="1.5" step="0.1" value="0.7" style="width:70px"><span id="pzv">0.7с</span></label>
+  <button id="furi" class="on" data-t-title="furiTitle">ふりがな</button>
+  <button id="tr" class="on" data-t="tr" data-t-title="trTitle">Перевод</button>
+  <label data-t-title="glossTitle"><span data-t="gloss">Словарь</span> <select id="lang"></select></label>
+  <label><span data-t="font">Шрифт</span> <input id="fs" type="range" min="18" max="52" value="30" style="width:80px"></label>
+  <button id="clear" data-t="clear">Очистить</button>
+  <button id="ui" data-t-title="uiTitle">🌐 EN</button>
+  <button id="cfg" data-t-title="cfgTitle">⚙</button>
+  <span id="status">подключение…</span>
+</header>
+<main>
+  <div id="lines"><div class="empty" id="empty" data-t-html="empty"></div></div>
+  <aside id="detail" class="hidden"></aside>
+</main>
+<form id="input"><input id="txt" data-t-ph="placeholder" autocomplete="off"><button data-t="analyze">Разобрать</button></form>
+<script>
+const $ = s => document.querySelector(s);
+const linesEl = $("#lines");
+let ws, partialEl = null, selEl = null, autoscroll = true, devices = [], curDev = null, paused = false,
+  glossLang = "en", uiLang = "en", lastStatus = null, connState = "connecting", langs = [], langNames = {},
+  prefsLoaded = false;  // язык интерфейса и подписей хранит сервер (data/settings.json), по умолчанию английский
+
+const I18N = {
+  ru: {
+    source: "Источник", refreshTitle: "Обновить устройства и взять текущий выход Windows",
+    pause: "⏸ Пауза", resume: "▶ Продолжить", sens: "Чувствит.", phrasePause: "Пауза фразы", sec: "с",
+    furiTitle: "Показать/скрыть фуригану", tr: "Перевод", trTitle: "Показать/скрыть перевод и грамматику (клавиша T)",
+    gloss: "Словарь", glossTitle: "Язык переводов под словами (клавиша L). Словари на других языках, кроме английского, неполные: если перевода нет, показывается английский (курсивом)",
+    uiTitle: "Язык интерфейса / Interface language", cfgTitle: "Словари и языки", font: "Шрифт", clear: "Очистить",
+    connecting: "подключение…", connected: "подключено", reconnecting: "нет связи с сервером, переподключаюсь…",
+    empty: "Включи звонок — речь из колонок/наушников появится здесь.<br>Нажми на слово, чтобы открыть словарную статью справа.<br>Внизу можно вставить японский текст из чата.",
+    placeholder: "Вставь японский текст (например, из LINE) и нажми Enter", analyze: "Разобрать",
+    typed: "✎ текст", speech: "{dur}с речи · {ms}мс", copy: "копировать", literally: "буквально",
+    dictForm: "словарная форма", notFound: "в словарях не найдено", core: "базовое", yarxi: "Яркси",
+    loading: "загрузка модели…", cpu: "GPU не завёлся", paused: "пауза", pcAudio: "🔊 звук ПК: ",
+    no_devices: "нет устройств записи",
+  },
+  en: {
+    source: "Source", refreshTitle: "Refresh devices and use the current Windows output",
+    pause: "⏸ Pause", resume: "▶ Resume", sens: "Sensitivity", phrasePause: "Phrase pause", sec: "s",
+    furiTitle: "Show/hide furigana", tr: "Glosses", trTitle: "Show/hide glosses and grammar (key T)",
+    gloss: "Dictionary", glossTitle: "Gloss language under words (key L). Dictionaries in languages other than English are incomplete: where a translation is missing, the English gloss is shown (in italics)",
+    uiTitle: "Interface language / Язык интерфейса", cfgTitle: "Dictionaries and languages", font: "Font", clear: "Clear",
+    connecting: "connecting…", connected: "connected", reconnecting: "lost connection to server, reconnecting…",
+    empty: "Start your call — speech from your speakers or headphones will appear here.<br>Click a word to open its dictionary entry on the right.<br>You can paste Japanese text from the chat below.",
+    placeholder: "Paste Japanese text (e.g. from LINE) and press Enter", analyze: "Analyze",
+    typed: "✎ text", speech: "{dur}s of speech · {ms}ms", copy: "copy", literally: "literally",
+    dictForm: "dictionary form", notFound: "not found in dictionaries", core: "core", yarxi: "Yarxi",
+    loading: "loading model…", cpu: "GPU unavailable", paused: "paused", pcAudio: "🔊 PC audio: ",
+    no_devices: "no capture devices",
+  },
+};
+const T = (k, vars) => {
+  let s = I18N[uiLang][k] ?? I18N.en[k] ?? k;
+  for (const [n, v] of Object.entries(vars || {})) s = s.replace(`{${n}}`, v);
+  return s;
+};
+// грамматика: с сервера приходит и русская (gram), и английская (gram_en) версия
+const gramOf = p => (uiLang === "en" && p.gram_en) || p.gram;
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const safe = s => esc(s).replace(/&lt;(\/?)i&gt;/g, "<$1i>");   // в WARODAI курсив <i>помета</i>
+
+function rubyHTML(parts) {
+  return parts.map(p => p.ruby.map(([t, r]) => r ? `<ruby>${esc(t)}<rt>${esc(r)}</rt></ruby>` : esc(t)).join("")).join("");
+}
+
+// Перевод лучшей статьи на выбранном языке, иначе её английский (а не перевод омонима ниже по списку);
+// если у неё нет ни того ни другого (WARODAI, базовое) — первая статья с переводом на выбранный язык
+function pickGloss(ents) {
+  const top = ents[0];
+  if (!top) return null;
+  for (const lang of [glossLang, "en"]) if (top.glosses[lang]) return {e: top, lang, senses: top.glosses[lang]};
+  for (const lang of [glossLang, "en"]) {
+    const e = ents.find(x => x.glosses[lang]);
+    if (e) return {e, lang, senses: e.glosses[lang]};
+  }
+  const [lang, senses] = Object.entries(top.glosses)[0] || [];
+  return lang ? {e: top, lang, senses} : null;
+}
+const sensesOf = e => e.glosses[glossLang] ? [glossLang, e.glosses[glossLang]]
+  : e.glosses.en ? ["en", e.glosses.en] : Object.entries(e.glosses)[0];
+
+// Короткий словарный перевод для подстрочника
+function shortGloss(senses) {
+  if (!senses || !senses.length) return "";
+  const out = [];
+  for (const s0 of senses) {
+    let s = s0.replace(/<i>.*?<\/i>/g, "").replace(/\(.*?\)/g, "").replace(/\[|\]/g, "")
+              .replace(/^[～〜][^\s]*\s*/, "").replace(/^\s*[:;,.]\s*/, "").trim();
+    if (!s || /^(см|ср)\./.test(s) || /[぀-ヿ一-鿿]/.test(s)) continue;
+    s = s.split(/;/)[0].split(/,\s/).slice(0, 2).join(", ").replace(/[.;,]$/, "").trim();
+    if (s.length > 34) s = s.slice(0, 32) + "…";
+    if (s && !out.includes(s)) out.push(s);
+    // второе значение добавляем, только если первое короткое
+    if (out.length === 2 || (out.length === 1 && out[0].length > 16)) break;
+  }
+  return out.join(" / ");
+}
+
+function renderLine(res) {
+  const div = document.createElement("div");
+  div.className = "line";
+  const meta = `<div class="meta"><span>${esc(res.ts || "")}</span>${res.typed ? `<span>${T("typed")}</span>` : ""}${res.ms ? `<span>${T("speech", {dur: res.dur, ms: res.ms})}</span>` : ""}<span class="raw" title="${T("copy")}">${esc(res.text)}</span></div>`;
+  const lit = [];
+  const chunks = res.chunks.map((c, i) => {
+    if (c.kind === "punct") return `<div class="chunk punct"><div class="jp">${esc(c.surface)}</div></div>`;
+    const head = c.parts[0];
+    const pick = c.head ? pickGloss(head.entries || []) : null;
+    const g = pick ? shortGloss(pick.senses) : "";
+    const gram = c.parts.flatMap(gramOf);
+    lit.push((g ? `<b>${esc(g)}</b>` : "") + (gram.length ? " " + esc(gram.join(" ")) : ""));
+    return `<div class="chunk ${c.kind}" data-i="${i}"><div class="jp">${rubyHTML(c.parts)}</div>` +
+      (g ? `<div class="gl ${pick.lang !== glossLang ? "fb" : ""}" dir="auto">${esc(g)}</div>` : "") +
+      (gram.length ? `<div class="gm">${esc(gram.join(" "))}</div>` : "") + `</div>`;
+  }).join("");
+  div.innerHTML = meta + `<div class="chunks">${chunks}</div><div class="lit">${T("literally")}: ${lit.filter(Boolean).join(" · ")}</div>`;
+  div._res = res;
+  div.querySelectorAll(".chunk[data-i]").forEach(el => el.onclick = () => showDetail(res.chunks[+el.dataset.i], el));
+  div.querySelector(".raw").onclick = () => navigator.clipboard?.writeText(res.text);
+  return div;
+}
+
+function showDetail(c, el) {
+  if (selEl) selEl.classList.remove("sel");
+  selEl = el; el.classList.add("sel");
+  const d = $("#detail");
+  d.classList.remove("hidden");
+  const head = c.parts[0];
+  let h = `<h2>${rubyHTML(c.parts)}</h2>`;
+  if (head.lemma) h += `<div class="rd">${T("dictForm")}: ${esc(head.lemma)}${head.lemma_reading ? " 【" + esc(head.lemma_reading) + "】" : ""}</div>`;
+  c.parts.forEach(p => gramOf(p).forEach(g => h += `<div class="gram">${esc(p.surface)} — ${esc(g)}</div>`));
+  if (head.kanji && head.kanji.length) {
+    const seen = new Set();
+    h += `<div class="kj">` + head.kanji.filter(k => !seen.has(k.ch) && seen.add(k.ch)).map(k =>
+      `<span title="${T("yarxi")}"><big>${esc(k.ch)}</big>${esc(k.nick)}${k.on ? ` <small style="color:var(--dim)">${esc(k.on.toUpperCase())}</small>` : ""}</span>`).join("") + `</div>`;
+  }
+  // статьи — в порядке релевантности, каждая на выбранном языке (или по-английски); к первой статье JMdict — ещё и английский
+  const ents = head.entries || [];
+  const srcName = (e, lang) => e.srcs?.[lang] || (e.src === "core" ? T("core") : e.src);
+  const ent = (e, lang, senses) => `<div class="ent"><div class="src">${esc(srcName(e, lang))} · ${lang.toUpperCase()}</div>
+      <div class="hw">${esc(e.kana)}${e.kanji ? "【" + esc(e.kanji) + "】" : ""}</div><ol>` +
+      senses.slice(0, 10).map(s => `<li dir="auto">${safe(s)}</li>`).join("") + `</ol>` +
+      ((e.examples || []).length ? `<div class="ex">${e.examples.slice(0, 4).map(safe).join("<br>")}</div>` : "") + `</div>`;
+  let enShown = glossLang === "en";
+  ents.forEach(e => {
+    const [lang, senses] = sensesOf(e);
+    h += ent(e, lang, senses);
+    if (!enShown && e.src === "JMdict" && e.glosses.en) {
+      if (lang !== "en") h += ent(e, "en", e.glosses.en);
+      enShown = true;
+    }
+  });
+  if (!ents.length) h += `<div class="ent" style="color:var(--dim)">${T("notFound")}</div>`;
+  d.innerHTML = h;
+  d.scrollTop = 0;
+}
+
+function addFinal(res) {
+  $("#empty")?.remove();
+  if (partialEl && (partialEl.dataset.id == res.id || res.typed)) { if (!res.typed) { partialEl.remove(); partialEl = null; } }
+  const el = renderLine(res);
+  if (partialEl) linesEl.insertBefore(el, partialEl); else linesEl.appendChild(el);
+  scroll();
+}
+function setPartial(msg) {
+  $("#empty")?.remove();
+  if (!partialEl) { partialEl = document.createElement("div"); partialEl.className = "partial"; linesEl.appendChild(partialEl); }
+  partialEl.dataset.id = msg.id;
+  partialEl.textContent = msg.text;
+  scroll();
+}
+function scroll() { if (autoscroll) linesEl.scrollTop = linesEl.scrollHeight; }
+linesEl.addEventListener("scroll", () => {
+  autoscroll = linesEl.scrollHeight - linesEl.scrollTop - linesEl.clientHeight < 80;
+});
+
+function renderStatus() {
+  const m = lastStatus;
+  if (!m) { $("#status").textContent = T(connState); return; }
+  const model = m.model_state === "loading" ? T("loading")
+    : m.model + (m.model_state === "gpu" ? " · GPU" : ` · CPU (${T("cpu")})`);
+  $("#status").textContent = model + (m.device ? " · " + m.device.name : paused ? " · " + T("paused") : "");
+  $("#pause").textContent = paused ? T("resume") : T("pause");
+}
+
+function connect() {
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => { connState = "connected"; $("#status").textContent = T(connState); };
+  ws.onclose = () => { connState = "reconnecting"; lastStatus = null; renderStatus(); setTimeout(connect, 1500); };
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.type === "final") addFinal(m);
+    else if (m.type === "partial") setPartial(m);
+    else if (m.type === "drop") { if (partialEl && partialEl.dataset.id == m.id) { partialEl.remove(); partialEl = null; } }
+    else if (m.type === "history") { linesEl.querySelectorAll(".line").forEach(x => x.remove()); m.items.forEach(addFinal); }
+    else if (m.type === "level") {
+      $("#meter i").style.width = Math.min(100, m.v / 0.05 * 100) + "%";
+      $("#meter").classList.toggle("speech", m.speech);
+    }
+    else if (m.type === "devices") { devices = m.list; fillDevices(); }
+    else if (m.type === "status") {
+      lastStatus = m; curDev = m.device; paused = m.paused;
+      if (!prefsLoaded) { prefsLoaded = true; setUi(m.ui || "en", false); glossLang = m.gloss || "en"; }
+      langNames = m.lang_names || langNames;
+      if (m.langs && m.langs.join() !== langs.join()) { langs = m.langs; fillLangs(); }
+      $("#thr").value = m.threshold; $("#pz").value = m.pause; $("#pzv").textContent = m.pause + T("sec");
+      $("#meter b").style.left = Math.min(100, m.threshold / 0.05 * 100) + "%";
+      $("#pause").classList.toggle("on", paused);
+      renderStatus();
+      fillDevices();
+    }
+    else if (m.type === "error") alert(T(m.text));
+  };
+}
+function fillDevices() {
+  const sel = $("#dev");
+  sel.innerHTML = devices.map(d => `<option value="${d.index}">${d.loopback ? T("pcAudio") : "🎤 "}${esc(d.name.replace(" [Loopback]", ""))}</option>`).join("");
+  if (curDev) sel.value = curDev.index;
+}
+const send = o => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
+$("#dev").onchange = e => send({type: "device", index: +e.target.value});
+$("#refresh").onclick = () => send({type: "refresh"});
+$("#pause").onclick = () => send({type: "pause", value: !paused, index: +$("#dev").value});
+$("#thr").oninput = e => { send({type: "settings", threshold: +e.target.value}); };
+$("#pz").oninput = e => { $("#pzv").textContent = e.target.value + T("sec"); send({type: "settings", pause: +e.target.value}); };
+$("#furi").onclick = e => { document.body.classList.toggle("nofuri"); e.target.classList.toggle("on"); };
+function setTr(on) {
+  document.body.classList.toggle("notr", !on);
+  $("#tr").classList.toggle("on", on);
+  try { localStorage.tr = on ? "1" : "0"; } catch {}
+}
+$("#tr").onclick = () => setTr(document.body.classList.contains("notr"));
+try { if (localStorage.tr === "0") setTr(false); } catch {}
+
+function rerenderLines() {
+  linesEl.querySelectorAll(".line").forEach(el => { if (el._res) el.replaceWith(renderLine(el._res)); });
+  selEl = null;
+  $("#detail").classList.add("hidden");
+}
+function fillLangs() {
+  $("#lang").innerHTML = langs.map(l => `<option value="${l}">${esc(langNames[l] || l)}</option>`).join("");
+  // выбранного языка нет в этой сборке словаря — берём язык интерфейса или английский
+  if (!langs.includes(glossLang)) setLang(langs.includes(uiLang) ? uiLang : "en", false);
+  $("#lang").value = glossLang;
+}
+function setLang(lang, remember = true) {
+  glossLang = lang;
+  $("#lang").value = lang;
+  if (remember) send({type: "prefs", gloss: lang});
+  rerenderLines();
+}
+const nextLang = () => langs.length ? langs[(langs.indexOf(glossLang) + 1) % langs.length] : glossLang;
+function setUi(lang, remember = true) {
+  uiLang = lang;
+  document.documentElement.lang = lang;
+  $("#ui").textContent = "🌐 " + lang.toUpperCase();
+  document.querySelectorAll("[data-t]").forEach(el => el.textContent = T(el.dataset.t));
+  document.querySelectorAll("[data-t-html]").forEach(el => el.innerHTML = T(el.dataset.tHtml));
+  document.querySelectorAll("[data-t-title]").forEach(el => el.title = T(el.dataset.tTitle));
+  document.querySelectorAll("[data-t-ph]").forEach(el => el.placeholder = T(el.dataset.tPh));
+  $("#pzv").textContent = $("#pz").value + T("sec");
+  if (remember) send({type: "prefs", ui: lang});
+  renderStatus();
+  fillDevices();
+}
+$("#lang").onchange = e => setLang(e.target.value);
+// смена языка интерфейса переключает и подписи (если такой язык есть в словаре); подписи потом можно сменить отдельно
+$("#ui").onclick = () => { setUi(uiLang === "en" ? "ru" : "en"); if (!langs.length || langs.includes(uiLang)) setLang(uiLang); };
+$("#cfg").onclick = () => location.href = "/setup";
+setUi("en", false);  // до первого статуса с сервера
+
+document.addEventListener("keydown", e => {
+  if (document.activeElement === $("#txt")) return;
+  if (e.key === "t" || e.key === "е") setTr(document.body.classList.contains("notr"));
+  if (e.key === "l" || e.key === "д") setLang(nextLang());
+});
+$("#fs").oninput = e => { document.documentElement.style.setProperty("--fs", e.target.value + "px"); try { localStorage.fs = e.target.value; } catch {} };
+try { if (localStorage.fs) { $("#fs").value = localStorage.fs; document.documentElement.style.setProperty("--fs", localStorage.fs + "px"); } } catch {}
+$("#clear").onclick = () => { send({type: "clear"}); linesEl.querySelectorAll(".line").forEach(x => x.remove()); };
+$("#input").onsubmit = e => { e.preventDefault(); const t = $("#txt").value.trim(); if (t) { send({type: "analyze", text: t}); $("#txt").value = ""; autoscroll = true; } };
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("#detail").classList.add("hidden"); });
+connect();
+</script>
+</body>
+</html>
