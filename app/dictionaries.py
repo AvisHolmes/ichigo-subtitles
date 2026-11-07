@@ -401,6 +401,126 @@ def yomitan_records(path):
                     yield term, readings, glosses
 
 
+# ---------------------------------------------------------------- Яркси (слова)
+
+# Частицы в значениях: *1 = ～する, **8 = ～になる, ***0 = ～なる (ключ — код, ~ на каждую лишнюю звёздочку)
+YARXI_PARTICLES = {
+    "0": "した", "1": "する", "2": "な", "3": "の", "4": "に", "5": "で", "6": "と", "7": "たる", "8": "して", "9": "している",
+    "~0": "をする", "~1": "がある", "~2": "のある", "~3": "のない", "~4": "である", "~5": "です", "~6": "だ",
+    "~7": "にする", "~8": "になる", "~9": "として", "~~0": "なる", "~~1": "から", "~~2": "まで", "~~3": "も",
+    "~~4": "は", "~~5": "とする", "~~6": "より", "~~7": "がしている", "~~8": "とした", "~~9": "としている",
+}
+YARXI_ABBR = {"0": "устар.", "1": "прям. и перен.", "2": "перен.", "3": "и т. п.", "4": "разг.", "5": "прост.",
+              "6": "то же", "7": "кн.", "8": "в идиомах", "9": "арх.", "@": "возвыш."}
+YARXI_PART_RE = re.compile(r"(\*+)([=+\-]?\d+|[@=+\-])")
+YARXI_REF_RE = re.compile(r"\^\^?[\dioorsStvzZ](\d{5,6})")
+YARXI_KANA_RE = re.compile(r"(\d)|([\^@])|([a-zA-Z:'()\[\]\-]+)|#(\d{2,4})#")
+
+
+def _rom2hira(rom):
+    rom = rom.replace("qi", "々").replace("ye", "っ")
+    rom = re.sub(r"m(?=[bmp])", "n'", rom)
+    rom = re.sub(r"n(?=n[aiueoy])", "n'", rom)  # jaconv читает «onna» как おんあ
+    return jaconv.alphabet2kana(rom).replace("'", "")
+
+
+def _long_vowels(rom):
+    """Варианты чтения: в ромадзи Яркси «o:» — это おう или おお, «e:» — えい или ええ."""
+    rom = rom.replace("a:", "aa").replace("u:", "uu").replace("i:", "ii")
+    out = [rom.replace("o:", "ou").replace("e:", "ei")]
+    if "o:" in rom or "e:" in rom:
+        out.append(rom.replace("o:", "oo").replace("e:", "ee"))
+    return out
+
+
+def yarxi_word(row, kanji):
+    """Написание слова: кандзи K1–K4 плюс поле Kana (окуригана по слотам, ^ — катакана, #N# — ещё кандзи)."""
+    ks, kana = row[:4], row[4] or ""
+    # отрицательный номер: слово пишется только каной, кандзи — лишь «полка», где оно лежит в словаре
+    slots = {} if min(ks) < 0 else {i + 1: kanji.get(k, "") for i, k in enumerate(ks) if k}
+    pos, katakana = 4, False
+    for digit, mark, text, extra in YARXI_KANA_RE.findall(kana):
+        if digit:
+            pos = int(digit)
+        elif mark:
+            katakana = mark == "^"
+        elif extra:
+            slots[max(slots, default=0) + 1] = kanji.get(int(extra), "")
+        else:
+            text = re.sub(r"[()\[\]\-]", "", text)
+            tsu = text.endswith("'")
+            text = text.rstrip("'")
+            if katakana:
+                part = jaconv.hira2kata(_rom2hira(text)).replace(":", "ー")
+            else:
+                part = _rom2hira(_long_vowels(text)[0])
+            slots[pos] = slots.get(pos, "") + part + (("ッ" if katakana else "っ") if tsu else "")
+    return "".join(slots[k] for k in sorted(slots))
+
+
+def yarxi_clean(s):
+    """Текст значения без разметки; курсивные пометы — в <i>, как у WARODAI."""
+    s = re.sub(r"\^[^\s\\;]*", "", s)  # ссылки
+    s = re.sub(r'\["[^\]]*\]', "", s)  # примеры ромадзи в ["…"]
+    s = re.sub(r"[{}]", "", s)
+    s = re.sub(r"\(!\d+\)", "", s)  # ударения
+    s = re.sub(r">(\d+|>)", "", s)
+    s = re.sub(r"@([\d@])", lambda m: f"#{YARXI_ABBR.get(m[1], '')}#", s)
+    s = s.replace("''", '"').replace("(#", "(").replace("#)", ")")
+    s = re.sub(r"\(\\?([^()#]*)#\\?([^()#]*?)\\?\)", r"(<i>\1</i> \2)", s)  # (англ.# ice cream)
+    s = s.replace("##", "#")
+    s = re.sub(r"#([^#]*)(#|$)", lambda m: f" <i>{m[1].strip(chr(92) + ' ')}</i> " if m[1].strip(chr(92) + " ") else " ", s)
+    s = s.replace("\\-\\", "-").replace("\\", " ").replace("_", ",").replace("+", ";").replace("=", "").replace("@", "")
+    s = re.sub(r"\s+([,;:.)\]])", r"\1", s)
+    s = re.sub(r"([(\[])\s+", r"\1", s)
+    s = re.sub(r"([,;])(?=[^\s\d])", r"\1 ", s)
+    return re.sub(r"\s+", " ", s).strip(" ;,")
+
+
+def yarxi_senses(rus):
+    """Значения одной группы чтений; строки с частицами (～する …) — отдельными значениями."""
+    senses = []
+    for part in rus.lstrip("!").split("&"):
+        if part.lstrip("\\ ").startswith(">"):  # имя, фамилия, топоним
+            continue
+        pieces = YARXI_PART_RE.split(part)
+        lines = [yarxi_clean(pieces[0])]
+        for stars, code, text in zip(pieces[1::3], pieces[2::3], pieces[3::3]):
+            p = YARXI_PARTICLES.get("~" * (len(stars) - 1) + code, "")
+            lines.append(f"～{p} {yarxi_clean(text)}".strip())
+        senses += [l for l in lines if l and l != "～"]
+    return senses
+
+
+def yarxi_records(path):
+    """(слово, [[варианты чтения], …], [значения], частотное ли) для настоящих слов из Tango."""
+    db = sqlite3.connect(f"file:{urllib.parse.quote(path)}?mode=ro", uri=True)
+    kanji = {n: chr(int(u)) for n, u in db.execute("SELECT Nomer, Uncd FROM Kanji") if u}
+    rows = db.execute("SELECT Nomer, K1, K2, K3, K4, Kana, Reading, Russian, Utility FROM Tango "
+                      "WHERE Russian IS NOT NULL AND Russian <> '' AND Russian NOT LIKE '>%'").fetchall()
+    db.close()
+    by_nomer = {r[0]: r[7] for r in rows}
+    for nomer, k1, k2, k3, k4, kana, reading, rus, utility in rows:
+        word = yarxi_word((k1, k2, k3, k4, kana), kanji)
+        if not word or not JP_RE.search(word):
+            continue
+        groups = (reading or "").split("|")
+        parts = rus.split("|")
+        if len(groups) != len(parts):
+            groups, parts = ["*".join(groups)], [rus.replace("|", "&")]
+        for group, part in zip(groups, parts):
+            senses = [x for x in yarxi_senses(part) if x != "<i>то же</i>"]
+            if not senses:  # статья-ссылка: «см. другое слово»
+                ref = YARXI_REF_RE.search(part)
+                target = by_nomer.get(int(ref[1])) if ref else None
+                senses = yarxi_senses(target.split("|")[0]) if target else []
+            if not senses:
+                continue
+            tokens = group.split("(")[0].replace("^", "").split("*")
+            readings = [[hira(_rom2hira(v)) for v in _long_vowels(t)] for t in tokens if re.fullmatch(r"[a-z:']+", t)]
+            yield word, readings, senses, int((utility or 10) < 10)
+
+
 # ---------------------------------------------------------------- сборка
 
 def build(s, data=DATA, out=None, report=print_report):
@@ -557,10 +677,20 @@ def build(s, data=DATA, out=None, report=print_report):
         if n % 20000 == 0:
             report("write", "dict.sqlite", n / len(entries))
 
-    # Яркси: «русские прозвища» кандзи из копии пользователя (по желанию)
+    # Яркси из копии пользователя (по желанию): слова — отдельными статьями, как WARODAI, и прозвища кандзи
     ypath = check_yarxi(s.get("yarxi")) if "ru" in langs else None
     if ypath:
         report("build", "Yarxi", None)
+        for word, readings, senses, common in yarxi_records(ypath):
+            known = set().union(*(kana_of[i] for i in index.get(word, [])))  # おう или おお — подсказывает JMdict
+            kana = [next((v for v in r if v in known), r[0]) for r in readings]
+            kanji = [word] if KANJI_RE.search(word) else []
+            kana = list(dict.fromkeys(kana)) if kanji else [word]
+            eid += 1
+            db.execute("INSERT INTO entry VALUES(?,?,?,?,?,?,?,?,?,?)",
+                       (eid, "yarxi", None, word if kanji else "", "・".join(kana), "",
+                        json.dumps(senses, ensure_ascii=False), "[]", None, common))
+            add_terms(eid, kanji, kana)
         y = sqlite3.connect(f"file:{urllib.parse.quote(ypath)}?mode=ro", uri=True)
         for uc, nick, on, kun in y.execute("SELECT Uncd, RusNick, Onyomi, Kunyomi FROM Kanji"):
             if not uc or not nick:

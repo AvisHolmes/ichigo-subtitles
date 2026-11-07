@@ -218,7 +218,7 @@ function showDetail(c, el) {
   }
   // статьи — в порядке релевантности, каждая на выбранном языке (или по-английски); к первой статье JMdict — ещё и английский
   const ents = head.entries || [];
-  const srcName = (e, lang) => e.srcs?.[lang] || (e.src === "core" ? T("core") : e.src);
+  const srcName = (e, lang) => e.srcs?.[lang] || (e.src === "core" ? T("core") : e.src === "Yarxi" ? T("yarxi") : e.src);
   const ent = (e, lang, senses) => `<div class="ent"><div class="src">${esc(srcName(e, lang))} · ${lang.toUpperCase()}</div>
       <div class="hw">${esc(e.kana)}${e.kanji ? "【" + esc(e.kanji) + "】" : ""}</div><ol>` +
       senses.slice(0, 10).map(s => `<li dir="auto">${safe(s)}</li>`).join("") + `</ol>` +

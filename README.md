@@ -34,8 +34,8 @@ On first start a setup wizard opens:
 1. **Interface language** — English or Русский.
 2. **Dictionaries.** English JMdict is always installed: it is the base of the dictionary (headwords,
    parts of speech, the fallback gloss for every word). Pick any extra languages for the glosses.
-3. **Install** — the wizard downloads and builds the dictionary (a minute or two); meanwhile the speech
-   model downloads in the background on the first run (~3 GB).
+3. **Install** — the wizard downloads and builds the dictionary (a minute or two, several minutes with
+   WARODAI); meanwhile the speech model downloads in the background on the first run (~3 GB).
 
 The dictionaries are not part of this repository (see the licenses below), so this step is required.
 To change languages later, press **⚙** in the app.
@@ -58,8 +58,9 @@ that have a translation, November 2026:
 
 - **Russian** speakers can also install [WARODAI](https://github.com/warodai/warodai-source), a large
   Japanese–Russian dictionary (non-commercial license), and connect **their own copy of
-  [Yarxi](https://www.yarxi.ru/)** (`yarxi.db`) for Russian kanji names. Yarxi is never downloaded or
-  copied: the app only reads your local file while building the dictionary.
+  [Yarxi](https://www.yarxi.ru/)** (`yarxi.db`), a large Japanese–Russian dictionary of words and kanji.
+  Yarxi is never downloaded or redistributed: the app reads your file and adds its data only to the
+  dictionary on your computer. Surnames and place names from Yarxi are skipped.
 - **Your own dictionaries.** There is no open Japanese dictionary yet for Italian, Vietnamese, Arabic,
   Hebrew, Indonesian, Ukrainian and many other languages. If you have a
   [Yomitan](https://github.com/yomidevs/yomitan) dictionary (`.zip`), connect it in the wizard and choose
@@ -130,9 +131,9 @@ The dictionaries are not part of this repository; each user downloads them from 
 потом словари. Английский JMdict ставится всегда, это основа словаря. Словари на других языках
 намного менее полные (см. таблицу выше); где перевода нет, показывается английский курсивом.
 Для русского можно дополнительно скачать WARODAI (большой японско-русский словарь, только
-некоммерческое использование) и подключить свою копию Яркси (`yarxi.db`) — для русских «прозвищ»
-кандзи. Яркси не скачивается и никуда не копируется: программа только читает ваш файл при сборке
-словаря. Для языков без открытого словаря можно подключить свой словарь Yomitan (`.zip`).
+некоммерческое использование) и подключить свою копию Яркси (`yarxi.db`) — большого словаря слов
+и кандзи. Яркси не скачивается и не распространяется: программа читает ваш файл и добавляет его
+данные только в словарь на вашем компьютере. Для языков без открытого словаря можно подключить свой словарь Yomitan (`.zip`).
 Поменять языки потом — кнопка **⚙** в программе.
 
 Запуск — ярлык «Ichigo» или `start.bat`, лог — `cache\ichigo.log`. Всё (модель, кэш, словари) лежит

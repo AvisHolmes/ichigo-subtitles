@@ -489,7 +489,7 @@ class Dictionary:
                 if kana_only and kind == "r" and kanji:
                     # слово написано каной: скорее это «обычно каной» слово, а не омоним с кандзи
                     score += 3 if "kana alone" in senses else -5
-                if src == "warodai":
+                if src in ("warodai", "yarxi"):
                     score += 7
                 elif any(v for k, v in json.loads(senses).items() if k not in ("en", "_src")):
                     score += 4  # есть перевод не только на английский — обычно это употребительное слово
@@ -512,6 +512,8 @@ class Dictionary:
 
     def _format(self, row, depth=0):
         eid, src, ext, kanji, kana, pos, senses, examples, ref, common, _ = row
+        if src == "yarxi":
+            return {"src": "Yarxi", "kanji": kanji, "kana": kana, "glosses": {"ru": json.loads(senses)}}
         if src == "warodai":
             ss = json.loads(senses)
             if ref and depth < 2:
