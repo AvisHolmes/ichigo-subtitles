@@ -2,7 +2,7 @@
 chcp 65001 >nul
 rem Установка Ichigo: окружение Python и зависимости, ярлык на рабочем столе, первый запуск.
 rem Словари выбираются и скачиваются в самой программе (мастер настройки при первом запуске).
-rem Нужен Python 3.12 (py launcher). Кэш pip и временные файлы — в папке cache, а не на диске C.
+rem Нужен Python 3.12 (py launcher). Кэш pip и временные файлы — в папке cache.
 cd /d "%~dp0"
 set "PIP_CACHE_DIR=%~dp0cache\pip"
 set "TEMP=%~dp0cache\tmp"

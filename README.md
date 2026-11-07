@@ -19,8 +19,7 @@ to have it broken down the same way. The interface and grammar notes are in **En
 - Python 3.12 with the `py` launcher;
 - an NVIDIA GPU for the `large-v3` model (without one, the `small` model runs on CPU with lower accuracy);
 - disk space: ~3 GB for Python packages, ~3 GB for the Whisper model, 0.1–0.5 GB for dictionaries.
-  Everything stays inside the app folder (`.venv`, `cache`, `data`); nothing is written to drive C
-  except the desktop shortcut.
+  Everything is kept inside the app folder.
 
 ## Install
 ```bat
@@ -136,5 +135,4 @@ The dictionaries are not part of this repository; each user downloads them from 
 данные только в словарь на вашем компьютере. Для языков без открытого словаря можно подключить свой словарь Yomitan (`.zip`).
 Поменять языки потом — кнопка **⚙** в программе.
 
-Запуск — ярлык «Ichigo» или `start.bat`, лог — `cache\ichigo.log`. Всё (модель, кэш, словари) лежит
-в папке программы, на диск C ничего не пишется, кроме ярлыка. Подробности — в разделах выше.
+Запуск — ярлык «Ichigo» или `start.bat`, лог — `cache\ichigo.log`. Подробности — в разделах выше.

@@ -15,7 +15,7 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 
-# Всё кэшируем на E:, а не на C:
+# Весь кэш — в папке программы
 os.environ.setdefault("HF_HOME", os.path.join(ROOT, "cache", "hf"))
 os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")

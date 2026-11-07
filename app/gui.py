@@ -97,7 +97,7 @@ def main():
 
     window.events.closed += on_closed
     window.events.shown += on_shown
-    # Данные WebView2 (размер шрифта и т. п.) — тоже в папке программы, а не в AppData на диске C
+    # Данные WebView2 (размер шрифта и т. п.) — тоже в папке программы
     webview.start(gui="edgechromium", private_mode=False, storage_path=os.path.join(CACHE, "webview"))
     os._exit(0)
 
