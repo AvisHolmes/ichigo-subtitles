@@ -24,8 +24,8 @@ to have it broken down the same way. The interface and grammar notes are in **En
 
 ## Install
 ```bat
-git clone <repository url> ichigo
-cd ichigo
+git clone https://github.com/AvisHolmes/ichigo-subtitles.git
+cd ichigo-subtitles
 setup.bat
 ```
 `setup.bat` installs the Python packages, puts an **Ichigo** shortcut on the desktop and starts the app.
